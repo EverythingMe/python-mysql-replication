@@ -35,9 +35,6 @@ class BinLogEvent(object):
         """Core data dumped for the event"""
         pass
 
-    def mark_processed(self):
-        if self.__log_persistancer:
-            self.__log_persistancer.save(self.packet.log_pos)
 
 class RotateEvent(BinLogEvent):
     """Change MySQL bin log file

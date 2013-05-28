@@ -14,14 +14,9 @@ from .table import Table
 
 
 class RowsEvent(BinLogEvent):
-<<<<<<< HEAD
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
-        super(RowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
-=======
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(RowsEvent, self).__init__(from_packet, event_size, table_map,
                                         ctl_connection)
->>>>>>> 7e582fb4e8a3a5ea212f15e7558cb6da43c37e2c
         self.__rows = None
 
         #Header
@@ -371,12 +366,6 @@ class RowsEvent(BinLogEvent):
 
 
 class DeleteRowsEvent(RowsEvent):
-<<<<<<< HEAD
-    '''This evenement is trigger when a row in database is removed'''
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
-        super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
-        self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
-=======
     """This event is trigger when a row in the database is removed"""
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
@@ -384,7 +373,6 @@ class DeleteRowsEvent(RowsEvent):
                                               table_map, ctl_connection)
         self.columns_present_bitmap = self.packet.read(
             (self.number_of_columns + 7) / 8)
->>>>>>> 7e582fb4e8a3a5ea212f15e7558cb6da43c37e2c
 
     def _fetch_one_row(self):
         row = {}
@@ -403,12 +391,6 @@ class DeleteRowsEvent(RowsEvent):
 
 
 class WriteRowsEvent(RowsEvent):
-<<<<<<< HEAD
-    '''This evenement is trigger when a row in database is added'''
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
-        super(WriteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
-        self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
-=======
     """This event is triggered when a row in database is added"""
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
@@ -416,7 +398,6 @@ class WriteRowsEvent(RowsEvent):
                                              table_map, ctl_connection)
         self.columns_present_bitmap = self.packet.read(
             (self.number_of_columns + 7) / 8)
->>>>>>> 7e582fb4e8a3a5ea212f15e7558cb6da43c37e2c
 
     def _fetch_one_row(self):
         row = {}
@@ -435,17 +416,11 @@ class WriteRowsEvent(RowsEvent):
 
 
 class UpdateRowsEvent(RowsEvent):
-<<<<<<< HEAD
-    '''This evenement is trigger when a row in database change'''
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
-        super(UpdateRowsEvent,self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
-=======
     """This event is triggered when a row in the database is changed"""
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(UpdateRowsEvent, self).__init__(from_packet, event_size,
                                               table_map, ctl_connection)
->>>>>>> 7e582fb4e8a3a5ea212f15e7558cb6da43c37e2c
         #Body
         self.columns_present_bitmap = self.packet.read(
             (self.number_of_columns + 7) / 8)
@@ -477,18 +452,12 @@ class UpdateRowsEvent(RowsEvent):
 class TableMapEvent(BinLogEvent):
     """This evenement describe the structure of a table.
     It's send before a change append on a table.
-<<<<<<< HEAD
-    A end user of the lib should have no usage of this'''
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
-        super(TableMapEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
-=======
     A end user of the lib should have no usage of this
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(TableMapEvent, self).__init__(from_packet, event_size,
                                             table_map, ctl_connection)
->>>>>>> 7e582fb4e8a3a5ea212f15e7558cb6da43c37e2c
 
         # Post-Header
         self.table_id = self._read_table_id()
