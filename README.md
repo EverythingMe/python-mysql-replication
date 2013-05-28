@@ -245,20 +245,35 @@ Tests
 ========
 <b>Be carefull</b> tests will reset the binary log of your MySQL server.
 
+Make sure you have the following configuration set in your mysql config file (usually my.cnf on development env):
+
+    log-bin=mysql-bin
+    server-id=1
+    binlog_do_db=pymysqlreplication_test
+    binlog-format    = row #Very important if you want to receive write, update and delete row events
+
+
 To run tests:
 
     python setup.py test
 
 Similar projects
 ==================
-Kodoma: Ruby-binlog based MySQL replication listener https://github.com/y310/kodama
+* Kodoma: Ruby-binlog based MySQL replication listener https://github.com/y310/kodama
+* MySQL Hadoop Applier: C++ version http://dev.mysql.com/tech-resources/articles/mysql-hadoop-applier.html
 
 Special thanks
 ================
 * MySQL binlog from Jeremy Cole was a great souce of knowledge about MySQL replication protocol https://github.com/jeremycole/mysql_binlog
 * Samuel Charron for his help https://github.com/scharron
+
+Contributors
+==============
+
 * bjoernhaeuser for his bugs fixing and improvements https://github.com/bjoernhaeuser
 * Dvir Volk for bug fix https://github.com/dvirsky
+* Lior Sion code cleanup and improvements https://github.com/liorsion
+* Lx Yu code improvements https://github.com/lxyu
 
 Licence
 =======

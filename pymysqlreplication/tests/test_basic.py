@@ -1,8 +1,12 @@
+# -*- coding: utf-8 -*-
+
 from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
+
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -26,17 +30,20 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         query = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
-        rotate_event = self.stream.fetchone()
+        # Rotate event
+        self.stream.fetchone()
         self.stream.close()
 
         query = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
-        rotate_event = self.stream.fetchone()
+        # Rotate event
+        self.stream.fetchone()
 
     def test_connection_stream_lost_event(self):
         self.stream.close()
-        self.stream = BinLogStreamReader(connection_settings = self.database, blocking = True)
+        self.stream = BinLogStreamReader(connection_settings=self.database,
+                                         blocking=True)
 
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
@@ -52,6 +59,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.stream.fetchone()
 
         event = self.stream.fetchone()
+
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
 
@@ -62,7 +70,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
     def test_filtering_events(self):
         self.stream.close()
-        self.stream = BinLogStreamReader(connection_settings = self.database, only_events = [QueryEvent])
+        self.stream = BinLogStreamReader(connection_settings=self.database,
+                                         only_events=[QueryEvent])
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
@@ -92,7 +101,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT)
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         else:
             self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
         self.assertIsInstance(event, WriteRowsEvent)
@@ -127,7 +136,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, DELETE_ROWS_EVENT)
+            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
         else:
             self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
         self.assertIsInstance(event, DeleteRowsEvent)
@@ -159,7 +168,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)
+            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
         else:
             self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
@@ -167,6 +176,83 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["before_values"]["data"], "Hello")
         self.assertEqual(event.rows[0]["after_values"]["id"], 1)
         self.assertEqual(event.rows[0]["after_values"]["data"], "World")
+
+    def test_log_pos(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello')"
+        self.execute(query)
+        self.execute("COMMIT")
+
+        for i in range(6):
+            self.stream.fetchone()
+        # record position after insert
+        log_file, log_pos = self.stream.log_file, self.stream.log_pos
+
+        query = "UPDATE test SET data = 'World' WHERE id = 1"
+        self.execute(query)
+        self.execute("COMMIT")
+
+        # resume stream from previous position
+        if self.stream is not None:
+            self.stream.close()
+        self.stream = BinLogStreamReader(
+            connection_settings=self.database,
+            resume_stream=True,
+            log_file=log_file,
+            log_pos=log_pos
+        )
+
+        # RotateEvent
+        self.stream.fetchone()
+        # FormatDescription
+        self.stream.fetchone()
+        # XidEvent
+        self.stream.fetchone()
+        # QueryEvent for the BEGIN
+        self.stream.fetchone()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, UpdateRowsEvent)
+
+        self.assertIsInstance(self.stream.fetchone(), XidEvent)
+
+        self.assertIsNone(self.stream.fetchone())
+
+    def test_log_pos_handles_disconnects(self):
+        self.stream = BinLogStreamReader(
+            connection_settings=self.database,
+            resume_stream=True
+        )
+
+        query = "CREATE TABLE test (id INT  PRIMARY KEY AUTO_INCREMENT, data VARCHAR (50) NOT NULL)"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello')"
+        self.execute(query)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        self.assertGreater(self.stream.log_pos, 0)
+
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
+        self.assertIsInstance(self.stream.fetchone(), WriteRowsEvent)
+        self.assertIsInstance(self.stream.fetchone(), XidEvent)
+
+        self.assertIsNone(self.stream.fetchone())
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        self.assertGreater(self.stream.log_pos, 0)
+
+        #self.assertFalse(self.stream._BinLogStreamReader__connected_stream)
+
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def test_insert_multiple_row_event(self):
@@ -192,7 +278,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT)
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         else:
             self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
         self.assertIsInstance(event, WriteRowsEvent)
@@ -230,7 +316,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)
+            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
         else:
             self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
@@ -272,7 +358,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, DELETE_ROWS_EVENT)
+            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
         else:
             self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
         self.assertIsInstance(event, DeleteRowsEvent)
@@ -283,7 +369,6 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[1]["values"]["id"], 2)
         self.assertEqual(event.rows[1]["values"]["data"], "World")
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader"]
 
 if __name__ == "__main__":
     import unittest
