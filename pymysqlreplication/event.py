@@ -7,14 +7,13 @@ from pymysql.util import byte2int, int2byte
 
 
 class BinLogEvent(object):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
         self.timestamp = self.packet.timestamp
         self.event_size = event_size
         self._ctl_connection = ctl_connection
-        self.__log_persistancer = log_persistancer
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -77,8 +76,8 @@ class XidEvent(BinLogEvent):
         print("Transaction ID: %d" % (self.xid))
 
 class NullEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
-        super(NullEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(NullEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.packet.advance(event_size)
 
 

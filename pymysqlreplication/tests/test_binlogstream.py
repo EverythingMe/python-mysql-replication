@@ -29,8 +29,7 @@ class BinLogStreamReaderTestCase(unittest.TestCase):
 
         _stream = BinLogStreamReader(connection_settings = mysql_settings, server_id=serverId,
                                      resume_stream=True,
-                                     only_events = None, blocking=True,
-                                     last_log_persistancer=None)
+                                     only_events = None, blocking=True)
 
         q = Queue.Queue(maxsize=0)
         def listen_and_alert_function():

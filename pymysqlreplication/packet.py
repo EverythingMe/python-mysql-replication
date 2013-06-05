@@ -50,7 +50,7 @@ class BinLogPacketWrapper(object):
 
     }
 
-    def __init__(self, from_packet, table_map, ctl_connection, log_persistancer = None):
+    def __init__(self, from_packet, table_map, ctl_connection):
         if not from_packet.is_ok_packet():
             raise ValueError(
                 "Cannot create %s object from invalid packet type" %

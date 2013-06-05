@@ -54,11 +54,7 @@ class BinLogStreamReader(object):
         self.__connection_settings['charset'] = 'utf8'
 
         self.__resume_stream = True
-        self.__last_log_persistancer = None
         self.close()
-
-    def update_log_persistancer(self, last_log_persistancer):
-        self.__last_log_persistancer = last_log_persistancer
 
     def close(self):
         if self.__connected_stream:
@@ -162,8 +158,6 @@ class BinLogStreamReader(object):
             except InternalError as (code, message):
                 if code == 1236:
                     logging.exception("Interal error - (%d) in mysql (%s)" % (code, message))
-                    if self.__last_log_persistancer:
-                        self.__last_log_persistancer.save(0)
                 else:
                     logging.exception("Internal error (%d) in mysql (%s)" % code, message)
                 raise
