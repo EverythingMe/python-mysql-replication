@@ -166,14 +166,13 @@ class BinLogStreamReader(object):
             try:
                 binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                    self._ctl_connection)
+
+
             except OperationalError as (code, message):
                 if code == 2013:
                     self.close()
                 else:
                     raise
-            except Exception, e:
-                logging.exception("Error iterating log!")
-                continue
 
             if binlog_event.event_type == TABLE_MAP_EVENT:
                 self.table_map[binlog_event.event.table_id] = \
